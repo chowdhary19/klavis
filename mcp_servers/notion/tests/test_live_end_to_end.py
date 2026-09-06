@@ -151,6 +151,20 @@ class TestLiveFailuresAreReportedAsErrors:
         assert body["type"] == "not_found_error"
 
 
+    async def test_internal_validation_error_also_sets_is_error(self, live_server):
+        """A failure raised inside a tool, before any API call, reports the same way.
+
+        create_page raises ValueError("Properties are required") and its own handler
+        converts it with handle_notion_error, so this exercises the api_error branch
+        and confirms the fix is not specific to SDK exceptions.
+        """
+        result = await _call(live_server, "notion_create_page", {"page": {}})
+        body = _body(result)
+        assert result.isError is True
+        assert body["type"] == "api_error"
+        assert "Properties are required" in body["details"]
+
+
 @pytest.mark.asyncio
 class TestLiveSuccessPathUnaffected:
     """The happy path must be untouched by any of the three changes."""
